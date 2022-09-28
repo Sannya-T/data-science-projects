@@ -1,0 +1,319 @@
+---
+title: "Time Series Project"
+author: "Sania Terki"
+date: "`r Sys.Date()`"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+## Identification d'un modèle stationnaire de type *ARIMA(p, q)*
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Importation des données et chargement des librairies
+
+```{r}
+# librairies
+library(forecast)
+library(tseries)
+library(tidyverse)
+library(readxl)
+
+#données
+serie1 <- read_excel("TERKI.xls", "serie1")
+serie2 <- read_excel("TERKI.xls", "serie2")
+serie3 <- read_excel("TERKI.xls", "serie3")
+
+#convertir en objet time series
+tsData1 = ts(serie1)
+tsData2 = ts(serie2)
+tsData3 = ts(serie3)
+
+```
+
+### Etape 1: Identification d'une famille de modèle
+
+#### Analyse des fonctions d'autocorrelations (ACF) et des fonction d'auto-corrélations partielles (PACF).
+
+##### Série 1
+
+```{r}
+serie1_time=ts(serie1$serie,start = min(serie1$temps),end = max(serie1$temps),frequency = 1)
+plot(serie1_time)
+acf(serie1_time,lag=30)
+acf(serie1_time,lag=30, plot=F)
+pacf(serie1_time,lag=20)
+pacf(serie1_time,lag=20, plot=F)
+adf.test(serie1_time)
+```
+
+##### Série 2
+
+```{r}
+serie2_time=ts(serie2$serie,start = min(serie2$temps),end = max(serie2$temps),frequency = 1)
+plot(serie2_time)
+acf(serie2_time,lag=15)
+acf(serie2_time,lag=15, plot=F)
+pacf(serie2_time,lag=15)
+pacf(serie2_time,lag=15, plot=F)
+adf.test(serie2_time)
+```
+
+##### Série 3
+
+```{r}
+serie3_time=ts(serie3$serie,start = min(serie3$temps),end = max(serie3$temps),frequency = 1)
+plot(serie3_time)
+acf(serie3_time,lag=20)
+acf(serie3_time,lag=20, plot=F)
+pacf(serie3_time,lag=15)
+pacf(serie3_time,lag=15, plot=F)
+adf.test(serie3_time)
+```
+
+#### Quelles conclusions peut on tirer de la forme des ACF et des PACF? suffisent-elles de proposer un type de modèles.
+
+D'après les fonctions d'autocorrélation, la série 1, et 3 ne sont pas
+stationnaires, car visuellement, les piques ne sont pas compris entre
+les tirés bleus et excèdent le seuil significatif. Pour la série 2, la
+majortié des piques se retrouvent entre les tirets bleus. En revanche,
+lorsque l'on utilise la fonction partial autocorrelation, on retrouve la
+quasi totalité de nos piques entre les lignes bleus pour la série 1 en
+particulier.\
+Dans le détail :
+
+-   Pour la série 1, nous voyons sur le corrélogramme que les
+    autocorrélations pour tous les lags dépassent les limites
+    significatives. Les autocorrélations pour les lag 0, 2, 4, 6, 8, 10,
+    12, 14 sont positives et diminuent en magnitude avec l'augmentation
+    du lag (lag 0 : 1, lag 2 : 0.803, lag 4 : 0.672, lag 6 : 0.580, lag
+    8 : 0.524, lag 10:0.460, lag 12:0.400 et lag 14 : 0.348 ). Les
+    autocorrélations se réduisent à zéro après le lag 30 (0,140).
+
+    Le corrélogramme partiel montre que les autocorrélations partielles
+    aux lags 1 et 2 dépassent les limites de signification, sont
+    positives et négatives, et diminuent lentement en magnitude avec
+    l'augmentation du lag (lag 1 : -0.701, lag 2 : -0.613). Les
+    autocorrélations partielles se terminent à zéro après le deuxième
+    lag
+
+-   Pour la série 2, nous voyons dans le corrélogramme que les
+    autocorrélations pour les lags 0, 1 et 3 dépassent les limites de
+    signification. Les autocorrélations pour les lags 0, 1, 3 sont
+    positives et diminuent en magnitude avec l'augmentation du lag (lag
+    0 : 1, lag 1 : 0.248, lag 3 : 0.200). Les autocorrélations se
+    réduisent à zéro après le lag 3.
+
+    Le corrélogramme partiel montre que les autocorrélations partielles
+    aux lags 1 et 3, 4, 6, 7, 8, 9, 10, 13 dépassent les limites de
+    signification et diminuent lentement en magnitude avec
+    l'augmentation du lag. Les autocorrélations partielles se terminent
+    à zéro après le lag 4.
+
+-   Pour la série 3, nous voyons dans le corrélogramme que les
+    autocorrélations pour les lags 0 à 15 sont postivies et dépassent
+    les limites de signification. Les autocorrélations pour ces lags
+    diminuent en magnitude avec l'augmentation du lag. Les
+    autocorrélations se réduisent à zéro après le lag 15 (0,102).
+
+    Le corrélogramme partiel montre que les autocorrélations partielles
+    aux lags 1 à 6 dépassent les limites de signification et diminuent
+    lentement en magnitude avec l'augmentation du lag. Les
+    autocorrélations partielles se terminent à zéro après le lag 7
+    (0,094).
+
+Pour confirmer ou infirmer ces résultats, on utilise un test augmenté de
+Dickey-Fuller, qui retourne une p-value \< 0.01 pour les 3 séries . Ce
+qui permet de dire que nos séries sont stationnaires.
+
+Il faut explorer l'indépendance des résidus en plus via une régression
+(linéaire, log-logistique)
+
+##### Vérification des régressions linéaires et de la non-dépendance des résidus
+
+Regression linéaire
+
+```{r}
+time = time(serie1_time)
+
+#Linear models
+fit_lin_1 <- lm(serie1_time~time) #serie1
+summary(fit_lin_1)
+
+fit_lin_2 <- lm(serie2_time~time) #serie2
+summary(fit_lin_2)
+
+fit_lin_3 <- lm(serie3_time~time) #serie3
+summary(fit_lin_3)
+
+#Ts linear model
+fit_lin_ts_1 <- tslm(serie1_time~time) #serie1
+summary(fit_lin_ts_1)
+
+fit_lin_ts_2 <- tslm(serie2_time~time) #serie2
+summary(fit_lin_ts_2)
+
+fit_lin_ts_3 <- tslm(serie3_time~time) #serie3
+summary(fit_lin_ts_3)
+```
+
+Vérification des résidus
+
+```{r}
+checkresiduals(fit_lin_ts_1) #serie1
+checkresiduals(fit_lin_ts_2) #serie2
+checkresiduals(fit_lin_ts_3) #serie3
+```
+
+Les résidus sont bien indépendants car la p-value pour les 3 series est
+significative. (p-value \< 2.2e-16)
+
+#### En cas de périodicité, faire une analyse spectrale pour détecter d'éventuelle périodicité cachée.
+
+Les 3 séries ne sont pas périodiques.
+
+#### Sur la base des indications précédentes, proposer une famille de modèles candidats (Exemple, AR, MA, ARMA, ARIMA, SARIMA, ....)
+
+1.  Les plots indiquent des modèles mixtes pour les 3 séries.
+
+2.  Le pronostic des résidus valide l'hypothèse d'indépendance.
+
+3.  Les séries sont stationnaires, non-périodiques.
+
+-   **Pour la série 1:**
+
+Puisque le corrélogramme se termine à zéro après le lag 30 et que le
+corrélogramme partiel est nul après le lag 2, les modèles ARMA suivants
+sont possibles pour la série chronologique :
+
+-   un modèle ARMA(2,0), étant donné que l'autocorrélogramme partiel est
+    nul après le lag 2 et que le corrélogramme se termine par zéro après
+    le lag 30.
+
+-   un modèle ARMA(0,3), puisque l'autocorrélogramme est nul après le
+    lag 30 et que le corrélogramme partiel s'éteint à zéro après le lag
+    2
+
+-   un modèle mixte ARMA(p,q), puisque le corrélogramme et le
+    corrélogramme partiel se terminent par zéro (bien que le
+    corrélogramme partiel se termine peut-être trop brusquement pour que
+    ce modèle soit approprié).
+
+En utilisant le principe de parcimonie, le modèle ARMA(2,0) et le modèle
+ARMA(p,q) sont des modèles candidats également bons. Si un modèle
+ARMA(2,0) (avec p=2, q=0) est utilisé pour modéliser la série
+chronologique, cela signifie qu'un modèle ARIMA(2,0,0) peut être utilisé
+(avec p=2, d=0, q=0, où d est l'ordre de différentiation requis). De
+même, si un modèle mixte ARMA(p,q) est utilisé, où p et q sont tous deux
+supérieurs à zéro, alors un modèle ARIMA(p,0,q) peut être utilisé.
+
+-   **Pour la série 2:**
+
+Puisque le corrélogramme se termine à zéro après le lag 3, et que le
+corrélogramme partiel est nul après le lag 4, les modèles ARMA suivants
+sont possibles pour la série chronologique :
+
+-   un modèle ARMA(4,0), étant donné que l'autocorrélogramme partiel est
+    nul après le lag 4 et que le corrélogramme se termine par un zéro
+    après le lag 3.
+
+-   un modèle ARMA(0,3), puisque l'autocorrélogramme est nul après le
+    lag 3 et que le corrélogramme partiel se termine par un zéro après
+    le lag 4
+
+-   un modèle mixte ARMA(p,q), puisque le corrélogramme et le
+    corrélogramme partiel se terminent par zéro.
+
+Ici, en utilisant le principe de parcimonie, qui consiste à conserver le
+modèle avec le moins de paramètre, le modèle ARMA(4,0) semble être un
+bon candidat. Un modèle ARMA(4,0) est un modèle autorégressif d'ordre 4,
+ou modèle AR(4). Ce modèle peut s'écrire comme suit :
+
+*X_t - mu = (Beta1 \* (X_t-1 - mu)) + (Beta2 \* (Xt-4 - mu)) + Z_t*, où
+X_t est la série temporelle stationnaire, mu est la moyenne de la série
+temporelle X_t, Beta1 et Beta2 sont les paramètres à estimer, et Z_t est
+un bruit blanc de moyenne zéro et de variance constante.
+
+-   Pour la série 3:
+
+Puisque le corrélogramme se termine à zéro après le lag 15, et que le
+corrélogramme partiel est nul après le lag 7, les modèles ARMA suivants
+sont possibles pour la série chronologique :
+
+-   un modèle mixte ARMA(p,q), puisque le corrélogramme et le
+    corrélogramme partiel se terminent par zéro.
+
+On confirme on utilisant la fonction *auto.arima()*
+
+```{r}
+serie1_fit <- auto.arima(serie1_time, trace = TRUE)
+serie2_fit <- auto.arima(serie2_time, trace = TRUE)
+serie3_fit <- auto.arima(serie3_time, trace = TRUE)
+```
+
+### Etape 2: La détermination du modèle proprement dite:
+
+#### Parmi les modèles candidats, proposer un ordre préliminaire de votre modèle (s'il s'agit de modèle ARIMA).
+
+Basé sur le critère de sélection AIC
+
+Serie 1: ARIMA(2,0,0) with zero mean\
+Serie 2: ARIMA(1,0,4) with zero mean
+
+Serie 3: ARIMA(4,0,1) with zero mean
+
+#### Sur la base de l'ordre proposé, estimer les paramètres du modèle y compris la variances des résidus.
+
+```{r}
+#Serie 1
+timeseriesarima1 <- arima(serie1_time, order=c(2,0,0)) # fit an ARIMA(2,0,0) model
+#Serie 2
+timeseriesarima2 <- arima(serie2_time, order=c(1,0,4)) # fit an ARIMA(1,0,4) model
+#Serie 3
+timeseriesarima3 <- arima(serie3_time, order=c(4,0,1)) # fit an ARIMA(4,0,1) model
+```
+
+```{r}
+timeseriesarima1
+timeseriesarima2
+timeseriesarima3
+```
+
+#### Analyser les résidus et vérifier si les hypothèse sont vérifiées (indépendance, stationnarité et normalité des résidus)
+
+```{r}
+time_series_residual_1 <- checkresiduals(timeseriesarima1, lag = 15)
+time_series_residual_2 <- checkresiduals(timeseriesarima2, lag = 15)
+time_series_residual_3 <- checkresiduals(timeseriesarima3, lag = 15)
+```
+
+Les résidus sont indépendants d'après le test "Ljung-Box" ou la p-value
+est \> 0.05 pour les 3 séries. Les graphiques ont été générés en
+utilisant des valeurs aléatoires sur une moyenne constante de 0, et avec
+une distribution de probabilité normale. Les processus générés fluctuent
+autour d'une moyenne constante, et aucune tendance n'est présente pour
+les résidus des 3 séries. D'après les histogrammes, les valeurs suivent
+une loi normal (forme de cloche).
+
+#### Répéter l'étape 2 jusqu'a ce que les hypothèses soit vérifiés et que vous obtenez un bruit blanc gaussien comme résidus. Utiliser éventuellement des critères de sélection de modèles pour choisir un modèle optimal (AIC, BIC, ...).
+
+```{r}
+serie1_fit <- auto.arima(serie1_time, ic ="bic", trace = TRUE)
+serie2_fit <- auto.arima(serie2_time, ic ="bic", trace = TRUE)
+serie3_fit <- auto.arima(serie3_time, ic ="bic", trace = TRUE)
+```
+
+Meilleur modèle basé sur le critère de sélection BIC
+
+-   Serie 1 : ARIMA(2,0,0)
+
+-   Serie 2 : ARIMA(1,0,1)
+
+-   Serie 3 : ARIMA(3,0,1)
