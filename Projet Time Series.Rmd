@@ -1,6 +1,6 @@
 ---
 title: "Time Series Project"
-author: "Sania Terki"
+author: "S. Terki"
 date: "`r Sys.Date()`"
 output:
   pdf_document: default
