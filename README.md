@@ -12,10 +12,3 @@ Here I present you my small portfolio of projects that I have been brought to re
 * Times series
 
 Also, I took part into a tutored project in partnership with the Institut Pascal on food resilience with in particular the elaboration of a cartography of competences from the open data of Pôle emploi and INSEE and the cartography of life basins and small food producers...
-
-I am currently taking the Machine Learning Engineer course at OpenClassrooms during which I will be required to carry out the following projects:
-* Design an application for public health using dimensionality reduction tools 
-* Anticipate the consumption needs of buildings.
-* Segment customers of an e-commerce site to optimize communication campaigns
-* Automatically categorize questions by developing a system to automatically tag user questions.
-* Classify images using Deep Learning algorithms Learning algorithms 
